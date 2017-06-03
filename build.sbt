@@ -43,13 +43,15 @@ lazy val rdbcPoolRoot = (project in file("."))
 lazy val rdbcPoolScala = (project in file("rdbc-pool-scala"))
   .settings(commonSettings: _*)
   .settings(
-    name := "rdbc-api-scala",
+    name := "rdbc-pool-scala",
     libraryDependencies ++= Vector(
       Library.rdbcScalaApi,
-      Library.rdbcImplbase
+      Library.rdbcImplbase,
+      Library.rdbcUtil,
+      Library.stm
     ),
     scalacOptions in(Compile, doc) ++= Vector(
       "-doc-title", "rdbc connection pool"
     ),
-    buildInfoPackage := "io.rdbc.pool.sapi"
+    buildInfoPackage := "io.rdbc.pool"
   )
