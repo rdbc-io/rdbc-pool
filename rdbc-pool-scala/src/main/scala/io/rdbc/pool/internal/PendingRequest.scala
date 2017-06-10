@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 
-package io.rdbc.pool.sapi
+package io.rdbc.pool.internal
 
-import io.rdbc.implbase.ConnectionFactoryPartialImpl
-import io.rdbc.sapi.{Connection, ConnectionFactory}
+import scala.concurrent.{Future, Promise}
 
-import scala.concurrent.{ExecutionContext, Future}
+private[pool] class PendingRequest(val id: Long, promise: Promise[PoolConnection]) {
 
-class ConnectionPool
-  extends ConnectionFactory
-    with ConnectionFactoryPartialImpl {
+  val connection: Future[PoolConnection] = {
+    promise.future
+  }
 
-  protected implicit def ec: ExecutionContext = ???
+  def successPromise(conn: PoolConnection): Unit = {
+    promise.success(conn)
+    ()
+  }
 
-  def connection(): Future[Connection] = ???
-  def shutdown(): Future[Unit] = ???
+  def failPromise(ex: Throwable): Unit = {
+    promise.failure(ex)
+    ()
+  }
+
 }
