@@ -1,4 +1,5 @@
 import Settings._
+import TemplateReplace.autoImport.mkdocsVariables
 import de.heikoseeberger.sbtheader.license.Apache2_0
 
 import scala.Console._
@@ -54,4 +55,13 @@ lazy val rdbcPoolScala = (project in file("rdbc-pool-scala"))
       "-doc-title", "rdbc connection pool"
     ),
     buildInfoPackage := "io.rdbc.pool"
+  )
+
+lazy val rdbcPoolDoc = (project in file("rdbc-pool-doc"))
+  .enablePlugins(TemplateReplace)
+  .settings(
+    publishArtifact := false,
+    mkdocsVariables := Map(
+      "version" -> version.value
+    )
   )
