@@ -16,7 +16,7 @@
 
 package io.rdbc.pool.internal
 
-import io.rdbc.pool.ConnectionPool
+import io.rdbc.pool.sapi.ConnectionPool
 import io.rdbc.sapi.{Connection, ExecutableStatement, SqlWithParams, Statement, StatementOptions, Timeout}
 
 import scala.concurrent.Future

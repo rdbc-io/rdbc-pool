@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package io.rdbc.pool
+package io.rdbc.pool.sapi
 
 import java.util.concurrent.atomic.AtomicLong
 
 import io.rdbc.ImmutSeq
 import io.rdbc.api.exceptions.{ConnectionValidationException, IllegalSessionStateException, TimeoutException}
 import io.rdbc.implbase.ConnectionFactoryPartialImpl
+import io.rdbc.pool.PoolIsShutDownException
 import io.rdbc.pool.internal.{PendingReqQueue, PendingRequest, PoolConnection}
 import io.rdbc.pool.internal.Compat._
 import io.rdbc.sapi.{Connection, ConnectionFactory, Timeout}
@@ -42,6 +43,8 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
   private val active = Ref(Set.empty[PoolConnection])
   private val connectingCount = Ref(0)
   private val isShutdown = Ref(false)
+
+  private val taskScheduler = config.taskScheduler()
 
   private val reqCounter = new AtomicLong(0L)
 
@@ -83,6 +86,9 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
       }
 
       foldShutdownFutures(conns.map(_.underlying.forceRelease()) :+ connFact.shutdown())
+        .andThen { case _ =>
+          taskScheduler.shutdown()
+        }
     } else {
       logger.warn(s"Pool '${config.name}' was already shut down")
       Future.unit
@@ -168,7 +174,7 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
   private def scheduleTimeout(req: PendingRequest, timeout: Timeout): Unit = {
     if (timeout.value.isFinite()) {
       val finiteTimeout = FiniteDuration(timeout.value.length, timeout.value.unit)
-      val task = config.taskScheduler.schedule(finiteTimeout) { () =>
+      val task = taskScheduler.schedule(finiteTimeout) { () =>
         timeoutPendingReq(req, finiteTimeout)
       }
       req.connection.foreach(_ => task.cancel())
@@ -212,13 +218,13 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
         .flatMap { conn =>
           conn.validate()(config.validateTimeout)
             .map(_ => Some(new PoolConnection(conn, this)))
-            .andThen {
-              case Success(Some(poolConn)) => acceptNewConnection(poolConn)
-              case Failure(ex) =>
-                logWarnException(s"Pool '${config.name}' could not establish a new connection", ex)
-                atomic { implicit tx =>
-                  connectingCount() = connectingCount() - 1
-                }
+        }
+        .andThen {
+          case Success(Some(poolConn)) => acceptNewConnection(poolConn)
+          case Failure(ex) =>
+            logWarnException(s"Pool '${config.name}' could not establish a new connection", ex)
+            atomic { implicit tx =>
+              connectingCount() = connectingCount() - 1
             }
         }
     } else {
