@@ -16,50 +16,45 @@
 
 package io.rdbc.pool.sapi
 
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicBoolean
 
 import io.rdbc.ImmutSeq
-import io.rdbc.api.exceptions.{ConnectionValidationException, IllegalSessionStateException, TimeoutException}
+import io.rdbc.api.exceptions.{ConnectionValidationException, IllegalSessionStateException}
 import io.rdbc.implbase.ConnectionFactoryPartialImpl
-import io.rdbc.pool.PoolIsShutDownException
-import io.rdbc.pool.internal.{PendingReqQueue, PendingRequest, PoolConnection}
-import io.rdbc.pool.internal.Compat._
+import io.rdbc.pool.PoolInactiveException
+import io.rdbc.pool.internal.manager.ConnectionManager
+import io.rdbc.pool.internal.{ConnectionReleaseListener, PendingRequest, PoolConnection, TimeoutScheduler}
 import io.rdbc.sapi.{Connection, ConnectionFactory, Timeout}
 import io.rdbc.util.Logging
 
-import scala.concurrent.duration._
-import scala.concurrent.stm._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
+import io.rdbc.pool.internal.Compat._
+
 class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConfig)
   extends ConnectionFactory
     with ConnectionFactoryPartialImpl
+    with ConnectionReleaseListener
     with Logging {
 
-  private val queue = Ref(PendingReqQueue.empty)
-  private val idle = Ref(Set.empty[PoolConnection])
-  private val active = Ref(Set.empty[PoolConnection])
-  private val connectingCount = Ref(0)
-  private val isShutdown = Ref(false)
-
-  private val taskScheduler = config.taskScheduler()
-
-  private val reqCounter = new AtomicLong(0L)
-
   protected implicit val ec: ExecutionContext = config.ec
+
+  private val connManager = new ConnectionManager(config.size)
+  private val taskScheduler = config.taskScheduler()
+  private val timeoutScheduler = new TimeoutScheduler(connManager, taskScheduler)
+
+  private val _active = new AtomicBoolean(true)
 
   fillPoolIfAtDeficit()
 
   def connection()(implicit timeout: Timeout): Future[Connection] = {
-    ifNotShutdown {
-      val req = new PendingRequest(reqCounter.incrementAndGet(), Promise[PoolConnection])
-      atomic { implicit tx =>
-        queue() = queue().enqueue(req)
-      }
+    ifActive {
+      val req = new PendingRequest(System.nanoTime(), Promise[PoolConnection])
+      connManager.enqueueRequest(req)
 
-      scheduleTimeout(req, timeout)
+      timeoutScheduler.scheduleTimeout(req, timeout)
       useAtMostOneIdle()
 
       req.connection
@@ -67,23 +62,10 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
   }
 
   def shutdown(): Future[Unit] = {
-    val doShutdown = atomic { implicit tx =>
-      if (!isShutdown()) {
-        isShutdown() = true
-        true
-      } else {
-        false
-      }
-    }
+    val doShutdown = _active.compareAndSet(true, false)
     if (doShutdown) {
       logger.info(s"Shutting down '${config.name}' pool")
-      val conns = atomic { implicit tx =>
-        val conns = (active() ++ idle()).toVector
-        active() = Set.empty
-        idle() = Set.empty
-        connectingCount() = 0
-        conns
-      }
+      val conns = connManager.clearConnections()
 
       foldShutdownFutures(conns.map(_.underlying.forceRelease()) :+ connFact.shutdown())
         .andThen { case _ =>
@@ -95,30 +77,22 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
     }
   }
 
-  private[pool] def receiveActiveConnection(conn: PoolConnection): Future[Unit] = {
-    ifNotShutdown {
+  def active: Boolean = _active.get()
+
+  private[pool] def activeConnectionReleased(conn: PoolConnection): Future[Unit] = {
+    ifActive {
       conn.rollbackTx()(config.rollbackTimeout)
         .flatMap(_ => conn.validate()(config.validateTimeout))
         .map { _ =>
-          atomic { implicit tx =>
-            dequeuePendingRequest() match {
-              case s@Some(_) => s
-              case None =>
-                removeActive(conn)
-                addIdle(conn)
-                None
-            }
-          }.foreach(_.successPromise(conn))
+          connManager.selectRequestOrAddActiveToIdle(conn).foreach(_.successPromise(conn))
         }
         .recoverWith(handleReceiveConnErrors(conn))
     }
   }
 
-  private[pool] def evictActiveConnection(conn: PoolConnection): Future[Unit] = {
-    ifNotShutdown {
-      atomic { implicit tx =>
-        removeActive(conn)
-      }
+  private[pool] def activeConnectionForceReleased(conn: PoolConnection): Future[Unit] = {
+    ifActive {
+      connManager.removeActive(conn)
       conn.underlying.forceRelease()
         .recover {
           case NonFatal(ex) =>
@@ -131,14 +105,7 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
   }
 
   private def maybeValidIdle(): Future[Option[PoolConnection]] = {
-    val maybeIdle = atomic { implicit tx =>
-      val maybeConn = idle().headOption
-      maybeConn.foreach { conn =>
-        removeIdle(conn)
-        addActive(conn)
-      }
-      maybeConn
-    }
+    val maybeIdle = connManager.selectIdleAsActive()
 
     maybeIdle match {
       case Some(conn) =>
@@ -147,7 +114,7 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
           .recoverWith {
             case ex: ConnectionValidationException =>
               logWarnException(s"Validation of idle connection failed in pool '${config.name}'", ex)
-              evictActiveConnection(conn).transformWith(_ => maybeValidIdle())
+              activeConnectionForceReleased(conn).transformWith(_ => maybeValidIdle())
           }
 
       case None => Future.successful(None)
@@ -157,103 +124,52 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
   private def useAtMostOneIdle(): Unit = {
     maybeValidIdle().foreach { maybeConn =>
       maybeConn.foreach { conn =>
-        val maybeReq = atomic { implicit tx =>
-          val maybeReq = dequeuePendingRequest()
-          maybeReq match {
-            case s@Some(_) => s
-            case None =>
-              addIdle(conn)
-              None
-          }
-        }
+        val maybeReq = connManager.selectRequestOrAddActiveToIdle(conn)
         maybeReq.foreach(_.successPromise(conn))
       }
     }
   }
 
-  private def scheduleTimeout(req: PendingRequest, timeout: Timeout): Unit = {
-    if (timeout.value.isFinite()) {
-      val finiteTimeout = FiniteDuration(timeout.value.length, timeout.value.unit)
-      val task = taskScheduler.schedule(finiteTimeout) { () =>
-        timeoutPendingReq(req, finiteTimeout)
-      }
-      req.connection.foreach(_ => task.cancel())
-    }
-  }
-
   private def acceptNewConnection(conn: PoolConnection): Unit = {
     logger.debug(s"Pool '${config.name}' successfully established a new connection")
-    val maybePendingReq = atomic { implicit tx =>
-      connectingCount() = connectingCount() - 1
-      if (isShutdown()) {
-        None
-      } else {
-        dequeuePendingRequest() match {
-          case Some(req) =>
-            addActive(conn)
-            Some(req)
-          case None =>
-            addIdle(conn)
-            None
-        }
-      }
-    }
+    val maybePendingReq = connManager.selectRequestOrAddNewToIdle(conn)
     maybePendingReq.foreach(_.successPromise(conn))
   }
 
-  private def increaseConnectingCountIfAtDeficit(): Int = {
-    atomic { implicit tx =>
-      val deficit = connectionDeficit()
-      if (deficit > 0) {
-        connectingCount() = connectingCount() + 1
-      }
-      deficit
-    }
-  }
-
   private def openNewConnectionIfAtDeficit(): Future[Option[PoolConnection]] = {
-    val deficit = increaseConnectingCountIfAtDeficit()
+    val deficit = connManager.increaseConnectingCountIfAtDeficit()
     if (deficit > 0) {
       connFact.connection()(config.connectTimeout)
         .flatMap { conn =>
           conn.validate()(config.validateTimeout)
-            .map(_ => Some(new PoolConnection(conn, this)))
+            .map(_ => Some(new PoolConnection(conn, config, this)))
         }
         .andThen {
           case Success(Some(poolConn)) => acceptNewConnection(poolConn)
           case Failure(ex) =>
             logWarnException(s"Pool '${config.name}' could not establish a new connection", ex)
-            atomic { implicit tx =>
-              connectingCount() = connectingCount() - 1
-            }
+            connManager.decrementConnectingCount()
         }
     } else {
       Future.successful(None)
     }
   }
 
-  private def dequeuePendingRequest()(implicit txn: InTxn): Option[PendingRequest] = {
-    queue().dequeueOption.map { case (head, tail) =>
-      queue() = tail
-      head
-    }
-  }
-
   private def handleReceiveConnErrors(conn: PoolConnection): PartialFunction[Throwable, Future[Unit]] = {
     case ex: IllegalSessionStateException =>
       logWarnException(s"Attempted to return to the pool '${config.name} connection in illegal state", ex)
-      evictActiveConnection(conn).transformWith(_ => Future.failed(ex))
+      activeConnectionForceReleased(conn).transformWith(_ => Future.failed(ex))
 
     case ex: ConnectionValidationException =>
       logWarnException(s"Validation of returned connection failed in pool '${config.name}'", ex)
-      evictActiveConnection(conn).recover { case _ => () }
+      activeConnectionForceReleased(conn).recover { case _ => () }
 
     case NonFatal(ex) =>
-      evictActiveConnection(conn).transformWith(_ => Future.failed(ex))
+      activeConnectionForceReleased(conn).transformWith(_ => Future.failed(ex))
   }
 
   private def fillPoolIfAtDeficit(): Unit = {
-    val deficit = atomic(implicit tx => connectionDeficit())
+    val deficit = connectionDeficit()
     if (deficit > 0) {
       (1 to deficit).foreach { _ =>
         openNewConnectionIfAtDeficit()
@@ -261,24 +177,11 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
     }
   }
 
-  private def connectionDeficit()(implicit txn: InTxn): Int = {
-    if (isShutdown()) {
+  private def connectionDeficit(): Int = {
+    if (_active.get()) {
       0
     } else {
-      config.size - connectingCount() - idle().size - active().size
-    }
-  }
-
-  private def timeoutPendingReq(req: PendingRequest, timeout: FiniteDuration): Unit = {
-    val doTimeout = atomic { implicit tx =>
-      if (queue().contains(req)) {
-        queue() = queue().evict(req)
-        true
-      } else false
-    }
-    if (doTimeout) {
-      logger.debug(s"Failing connection request '$req' because of a timeout after $timeout")
-      req.failPromise(new TimeoutException(timeout))
+      connManager.connectionDeficit()
     }
   }
 
@@ -294,48 +197,12 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
     //TODO should the exceptions be ignored here?
   }
 
-  private def ifNotShutdown[A](body: => Future[A]): Future[A] = {
-    if (!isShutdown.single()) {
+  private def ifActive[A](body: => Future[A]): Future[A] = {
+    if (_active.get()) {
       body
     } else {
-      Future.failed(new PoolIsShutDownException(config.name))
+      Future.failed(new PoolInactiveException(config.name))
     }
-  }
-
-  private def addConnToSet(conn: PoolConnection,
-                           coll: Ref[Set[PoolConnection]],
-                           msg: String)
-                          (implicit tx: InTxn): Unit = {
-    coll() = coll() + conn
-    Txn.afterCommit { _ =>
-      logger.debug(s"$conn $msg")
-    }
-  }
-
-  private def removeConnFromSet(conn: PoolConnection,
-                                coll: Ref[Set[PoolConnection]],
-                                msg: String)
-                               (implicit tx: InTxn): Unit = {
-    coll() = coll() - conn
-    Txn.afterCommit { _ =>
-      logger.debug(s"$conn $msg")
-    }
-  }
-
-  private def addIdle(conn: PoolConnection)(implicit tx: InTxn): Unit = {
-    addConnToSet(conn, idle, "added to idle set")
-  }
-
-  private def removeIdle(conn: PoolConnection)(implicit tx: InTxn): Unit = {
-    removeConnFromSet(conn, idle, "removed from idle set")
-  }
-
-  private def addActive(conn: PoolConnection)(implicit tx: InTxn): Unit = {
-    addConnToSet(conn, active, "added to active set")
-  }
-
-  private def removeActive(conn: PoolConnection)(implicit tx: InTxn): Unit = {
-    removeConnFromSet(conn, active, "removed from active set")
   }
 
   private def logWarnException(msg: String, ex: Throwable): Unit = {

@@ -16,17 +16,18 @@
 
 package io.rdbc.pool.internal
 
-import io.rdbc.pool.sapi.ConnectionPool
-import io.rdbc.sapi.{Connection, ExecutableStatement, SqlWithParams, Statement, StatementOptions, Timeout}
+import io.rdbc.pool.sapi.ConnectionPoolConfig
+import io.rdbc.sapi._
 
 import scala.concurrent.Future
 
 
 private[pool] class PoolConnection(private[pool] val underlying: Connection,
-                                   val pool: ConnectionPool)
+                                   poolConfig: ConnectionPoolConfig,
+                                   releaseListener: ConnectionReleaseListener)
   extends Connection {
 
-  private implicit val ec = pool.config.ec
+  private implicit val ec = poolConfig.ec
 
   def beginTx()(implicit timeout: Timeout): Future[Unit] = {
     underlying.beginTx()
@@ -45,12 +46,12 @@ private[pool] class PoolConnection(private[pool] val underlying: Connection,
   }
 
   def release(): Future[Unit] = {
-    pool.receiveActiveConnection(this)
+    releaseListener.activeConnectionReleased(this)
   }
 
   def forceRelease(): Future[Unit] = {
     //TODO should this actually close the conn? I don't think so
-    pool.evictActiveConnection(this)
+    releaseListener.activeConnectionForceReleased(this)
   }
 
   def validate()(implicit timeout: Timeout): Future[Unit] = {
@@ -78,5 +79,5 @@ private[pool] class PoolConnection(private[pool] val underlying: Connection,
     underlying.watchForIdle.map(_ => this)
   }
 
-  override def toString: String = s"pool-${pool.config.name}{$underlying}"
+  override def toString: String = s"pool-${poolConfig.name}{$underlying}"
 }

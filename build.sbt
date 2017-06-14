@@ -49,7 +49,8 @@ lazy val rdbcPoolScala = (project in file("rdbc-pool-scala"))
       Library.rdbcScalaApi,
       Library.rdbcImplbase,
       Library.rdbcUtil,
-      Library.stm
+      Library.stm,
+      Library.scalatest
     ),
     scalacOptions in(Compile, doc) ++= Vector(
       "-doc-title", "rdbc connection pool"
