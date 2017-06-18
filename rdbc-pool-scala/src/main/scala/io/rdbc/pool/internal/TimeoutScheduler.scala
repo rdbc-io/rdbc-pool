@@ -44,7 +44,7 @@ class TimeoutScheduler(poolManager: ConnectionManager,
     val existed = poolManager.evictRequestIfExists(req)
     if (existed) {
       logger.debug(s"Failing connection request '$req' because of a timeout after $timeout")
-      req.failPromise(new TimeoutException(timeout))
+      req.failure(new TimeoutException(timeout))
     }
   }
 

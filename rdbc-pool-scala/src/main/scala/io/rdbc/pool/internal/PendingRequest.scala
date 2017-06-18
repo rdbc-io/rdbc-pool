@@ -18,18 +18,18 @@ package io.rdbc.pool.internal
 
 import scala.concurrent.{Future, Promise}
 
-private[pool] class PendingRequest(val id: Long, promise: Promise[PoolConnection]) {
+private[pool] class PendingRequest(val id: Long) {
 
-  val connection: Future[PoolConnection] = {
-    promise.future
-  }
+  private val promise = Promise[PoolConnection]
 
-  def successPromise(conn: PoolConnection): Unit = {
+  val connection: Future[PoolConnection] = promise.future
+
+  def success(conn: PoolConnection): Unit = {
     promise.success(conn)
     ()
   }
 
-  def failPromise(ex: Throwable): Unit = {
+  def failure(ex: Throwable): Unit = {
     promise.failure(ex)
     ()
   }

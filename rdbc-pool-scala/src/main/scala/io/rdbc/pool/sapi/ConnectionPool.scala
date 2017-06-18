@@ -27,7 +27,7 @@ import io.rdbc.pool.internal.{ConnectionReleaseListener, PendingRequest, PoolCon
 import io.rdbc.sapi.{Connection, ConnectionFactory, Timeout}
 import io.rdbc.util.Logging
 
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
@@ -51,7 +51,7 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
 
   def connection()(implicit timeout: Timeout): Future[Connection] = {
     ifActive {
-      val req = new PendingRequest(System.nanoTime(), Promise[PoolConnection])
+      val req = new PendingRequest(System.nanoTime())
       connManager.enqueueRequest(req)
 
       timeoutScheduler.scheduleTimeout(req, timeout)
@@ -84,7 +84,7 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
       conn.rollbackTx()(config.rollbackTimeout)
         .flatMap(_ => conn.validate()(config.validateTimeout))
         .map { _ =>
-          connManager.selectRequestOrAddActiveToIdle(conn).foreach(_.successPromise(conn))
+          connManager.selectRequestOrAddActiveToIdle(conn).foreach(_.success(conn))
         }
         .recoverWith(handleReceiveConnErrors(conn))
     }
@@ -125,7 +125,7 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
     maybeValidIdle().foreach { maybeConn =>
       maybeConn.foreach { conn =>
         val maybeReq = connManager.selectRequestOrAddActiveToIdle(conn)
-        maybeReq.foreach(_.successPromise(conn))
+        maybeReq.foreach(_.success(conn))
       }
     }
   }
@@ -133,7 +133,7 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
   private def acceptNewConnection(conn: PoolConnection): Unit = {
     logger.debug(s"Pool '${config.name}' successfully established a new connection")
     val maybePendingReq = connManager.selectRequestOrAddNewToIdle(conn)
-    maybePendingReq.foreach(_.successPromise(conn))
+    maybePendingReq.foreach(_.success(conn))
   }
 
   private def openNewConnectionIfAtDeficit(): Future[Option[PoolConnection]] = {

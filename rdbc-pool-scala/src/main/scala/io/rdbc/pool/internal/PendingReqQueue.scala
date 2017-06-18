@@ -34,15 +34,15 @@ sealed trait PendingReqQueue {
 }
 
 private[pool] object PendingReqQueue {
-  val empty: PendingReqQueue = EmptyPendingReqQueue
+  val empty: PendingReqQueue = Empty
 
-  private object EmptyPendingReqQueue extends PendingReqQueue {
+  private object Empty extends PendingReqQueue {
     def contains(req: PendingRequest): Boolean = false
 
     def evict(req: PendingRequest): PendingReqQueue = this
 
     def enqueue(req: PendingRequest): PendingReqQueue = {
-      new NonEmptyPendingReqQueue(TreeSet(req)(Ordering.by(_.id)))
+      new NonEmpty(TreeSet(req)(Ordering.by(_.id)))
     }
 
     val dequeueOption: Option[(PendingRequest, PendingReqQueue)] = None
@@ -51,10 +51,10 @@ private[pool] object PendingReqQueue {
 
     val size = 0
 
-    override lazy val toString: String = "PendingReqQueue()"
+    override val toString: String = "PendingReqQueue()"
   }
 
-  private class NonEmptyPendingReqQueue(private val set: TreeSet[PendingRequest])
+  private class NonEmpty(private val set: TreeSet[PendingRequest])
     extends PendingReqQueue {
 
     def contains(req: PendingRequest): Boolean = {
@@ -66,12 +66,12 @@ private[pool] object PendingReqQueue {
       if (newSet.isEmpty) {
         PendingReqQueue.empty
       } else {
-        new NonEmptyPendingReqQueue(newSet)
+        new NonEmpty(newSet)
       }
     }
 
     def enqueue(req: PendingRequest): PendingReqQueue = {
-      new NonEmptyPendingReqQueue(set + req)
+      new NonEmpty(set + req)
     }
 
     def dequeueOption: Option[(PendingRequest, PendingReqQueue)] = {
@@ -80,7 +80,7 @@ private[pool] object PendingReqQueue {
         val newQueue = if (newSet.isEmpty) {
           PendingReqQueue.empty
         } else {
-          new NonEmptyPendingReqQueue(newSet)
+          new NonEmpty(newSet)
         }
         (req, newQueue)
       }
