@@ -18,34 +18,81 @@ package io.rdbc.pool.internal
 
 import scala.collection.immutable.TreeSet
 
-private[pool] object PendingReqQueue {
-  val empty: PendingReqQueue = new PendingReqQueue(
-    TreeSet.empty[PendingRequest](Ordering.by(_.id))
-  )
+private[pool]
+sealed trait PendingReqQueue {
+  def contains(req: PendingRequest): Boolean
+
+  def evict(req: PendingRequest): PendingReqQueue
+
+  def enqueue(req: PendingRequest): PendingReqQueue
+
+  def dequeueOption: Option[(PendingRequest, PendingReqQueue)]
+
+  def size: Int
+
+  def isEmpty: Boolean
 }
 
-private[pool]
-class PendingReqQueue private(private val set: TreeSet[PendingRequest]) {
+private[pool] object PendingReqQueue {
+  val empty: PendingReqQueue = EmptyPendingReqQueue
 
-  def contains(req: PendingRequest): Boolean = {
-    set.contains(req)
+  private object EmptyPendingReqQueue extends PendingReqQueue {
+    def contains(req: PendingRequest): Boolean = false
+
+    def evict(req: PendingRequest): PendingReqQueue = this
+
+    def enqueue(req: PendingRequest): PendingReqQueue = {
+      new NonEmptyPendingReqQueue(TreeSet(req)(Ordering.by(_.id)))
+    }
+
+    val dequeueOption: Option[(PendingRequest, PendingReqQueue)] = None
+
+    val isEmpty = true
+
+    val size = 0
+
+    override lazy val toString: String = "PendingReqQueue()"
   }
 
-  def evict(req: PendingRequest): PendingReqQueue = {
-    new PendingReqQueue(set - req)
-  }
+  private class NonEmptyPendingReqQueue(private val set: TreeSet[PendingRequest])
+    extends PendingReqQueue {
 
-  def enqueue(req: PendingRequest): PendingReqQueue = {
-    new PendingReqQueue(set + req)
-  }
+    def contains(req: PendingRequest): Boolean = {
+      set.contains(req)
+    }
 
-  def dequeueOption: Option[(PendingRequest, PendingReqQueue)] = {
-    set.headOption.map { req =>
-      (req, new PendingReqQueue(set - req))
+    def evict(req: PendingRequest): PendingReqQueue = {
+      val newSet = set - req
+      if (newSet.isEmpty) {
+        PendingReqQueue.empty
+      } else {
+        new NonEmptyPendingReqQueue(newSet)
+      }
+    }
+
+    def enqueue(req: PendingRequest): PendingReqQueue = {
+      new NonEmptyPendingReqQueue(set + req)
+    }
+
+    def dequeueOption: Option[(PendingRequest, PendingReqQueue)] = {
+      set.headOption.map { req =>
+        val newSet = set - req
+        val newQueue = if (newSet.isEmpty) {
+          PendingReqQueue.empty
+        } else {
+          new NonEmptyPendingReqQueue(newSet)
+        }
+        (req, newQueue)
+      }
+    }
+
+    val isEmpty = false
+
+    val size: Int = set.size
+
+    override lazy val toString: String = {
+      set.mkString("PendingReqQueue(", ",", ")")
     }
   }
 
-  override lazy val toString: String = {
-    set.mkString("PendingReqQueue(", ",", ")")
-  }
 }

@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package io.rdbc.pool
+package io.rdbc.pool.internal
 
-import io.rdbc.api.exceptions.UncategorizedRdbcException
+import scala.concurrent.Future
 
-class PoolIsShutDownException(val poolName: String)
-  extends UncategorizedRdbcException(s"Pool '$poolName' is shut down")
+private[pool] trait ConnectionReleaseListener {
+  private[pool] def activeConnectionReleased(conn: PoolConnection): Future[Unit]
+  private[pool] def activeConnectionForceReleased(conn: PoolConnection): Future[Unit]
+}

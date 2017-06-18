@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.rdbc.pool
+package io.rdbc.pool.sapi
 
 import java.util.concurrent.Executors
 
@@ -32,7 +32,7 @@ object ConnectionPoolConfig {
       validateTimeout = Timeout(5.seconds),
       connectTimeout = Timeout(5.seconds),
       rollbackTimeout = Timeout(5.seconds),
-      taskScheduler = new JdkScheduler(Executors.newSingleThreadScheduledExecutor()), //TODO oooooo
+      taskScheduler = () => new JdkScheduler(Executors.newSingleThreadScheduledExecutor()), //TODO oooooo
       size = 20
     )
   }
@@ -43,5 +43,5 @@ case class ConnectionPoolConfig(name: String,
                                 validateTimeout: Timeout,
                                 connectTimeout: Timeout,
                                 rollbackTimeout: Timeout,
-                                taskScheduler: TaskScheduler,
+                                taskScheduler: () => TaskScheduler,
                                 ec: ExecutionContext)
