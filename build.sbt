@@ -1,6 +1,5 @@
 import Settings._
 import TemplateReplace.autoImport.mkdocsVariables
-import de.heikoseeberger.sbtheader.license.Apache2_0
 
 import scala.Console._
 
@@ -13,11 +12,9 @@ lazy val commonSettings = Vector(
   crossScalaVersions := Vector("2.11.11"),
 
   licenses := Vector(
-    "Apache License, Version 2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.html")
+    "Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.html")
   ),
-  headers := Map(
-    "scala" -> Apache2_0(Copyright.years, Copyright.holder)
-  ),
+  headerLicense := Some(HeaderLicense.ALv2(Copyright.years, "Krzysztof Pado")),
 
   homepage := Some(url("https://github.com/rdbc-io/rdbc-pool")),
   scmInfo := Some(
@@ -50,7 +47,8 @@ lazy val rdbcPoolScala = (project in file("rdbc-pool-scala"))
       Library.rdbcImplbase,
       Library.rdbcUtil,
       Library.stm,
-      Library.scalatest
+      Library.scalatest,
+      Library.scalamock
     ),
     scalacOptions in(Compile, doc) ++= Vector(
       "-doc-title", "rdbc connection pool"

@@ -9,4 +9,5 @@ object Library {
   val stm = "org.scala-stm" %% "scala-stm" % "0.8"
 
   val scalatest = "org.scalatest" %% "scalatest" % "3.0.3" % Test
+  val scalamock = "org.scalamock" %% "scalamock-scalatest-support" % "3.5.0" % Test
 }

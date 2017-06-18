@@ -1,8 +1,6 @@
 package io.rdbc.pool
 
-import io.rdbc.pool.internal.{PendingReqQueue, PendingRequest, PoolConnection}
-
-import scala.concurrent.Promise
+import io.rdbc.pool.internal.{PendingReqQueue, PendingRequest}
 
 class PendingReqQueueSpec extends RdbcPoolSpec {
 
@@ -21,19 +19,19 @@ class PendingReqQueueSpec extends RdbcPoolSpec {
       }
 
       "return empty queue when evict is invoked" in {
-        PendingReqQueue.empty.evict(pendingReq).isEmpty shouldBe true
+        PendingReqQueue.empty.evict(fixedPendingReq).isEmpty shouldBe true
       }
 
       "return false for contains check" in {
-        PendingReqQueue.empty.contains(pendingReq) shouldBe false
+        PendingReqQueue.empty.contains(fixedPendingReq) shouldBe false
       }
 
       "produce a non-empty queue" in {
-        PendingReqQueue.empty.enqueue(pendingReq).isEmpty shouldBe false
+        PendingReqQueue.empty.enqueue(fixedPendingReq).isEmpty shouldBe false
       }
 
       "ignore an eviction attempts" in {
-        PendingReqQueue.empty.evict(pendingReq).isEmpty shouldBe true
+        PendingReqQueue.empty.evict(fixedPendingReq).isEmpty shouldBe true
       }
 
       "have a correct string representation" in {
@@ -69,12 +67,12 @@ class PendingReqQueueSpec extends RdbcPoolSpec {
     }
 
     "be able to find enqueued item" in {
-      PendingReqQueue.empty.enqueue(pendingReq).contains(pendingReq) shouldBe true
+      PendingReqQueue.empty.enqueue(fixedPendingReq).contains(fixedPendingReq) shouldBe true
     }
 
     "should evict existing item" in {
-      val q = PendingReqQueue.empty.enqueue(pendingReq)
-      val emptyQueue = q.evict(pendingReq)
+      val q = PendingReqQueue.empty.enqueue(fixedPendingReq)
+      val emptyQueue = q.evict(fixedPendingReq)
       emptyQueue.isEmpty shouldBe true
       emptyQueue.size shouldBe 0
       emptyQueue.dequeueOption shouldBe empty
@@ -92,8 +90,8 @@ class PendingReqQueueSpec extends RdbcPoolSpec {
     }
 
     "should ignore existing elements when enqueueing" in {
-      val q = PendingReqQueue.empty.enqueue(pendingReq)
-      q.enqueue(pendingReq).size shouldBe 1
+      val q = PendingReqQueue.empty.enqueue(fixedPendingReq)
+      q.enqueue(fixedPendingReq).size shouldBe 1
 
     }
 
@@ -111,11 +109,7 @@ class PendingReqQueueSpec extends RdbcPoolSpec {
     }
   }
 
-  val pendingReq: PendingRequest = {
-    pendingReq(1L)
-  }
+  private val fixedPendingReq = pendingReq(1L)
 
-  def pendingReq(id: Long): PendingRequest = {
-    new PendingRequest(id, Promise[PoolConnection])
-  }
+  private def pendingReq(id: Long) = new PendingRequest(id)
 }
