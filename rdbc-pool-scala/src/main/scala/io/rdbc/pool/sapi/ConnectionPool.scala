@@ -178,7 +178,7 @@ class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConf
   }
 
   private def connectionDeficit(): Int = {
-    if (_active.get()) {
+    if (!_active.get()) {
       0
     } else {
       connManager.connectionDeficit()
