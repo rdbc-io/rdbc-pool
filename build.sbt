@@ -8,13 +8,14 @@ shellPrompt.in(ThisBuild) := (state => s"${CYAN}project:$GREEN${Project.extract(
 
 lazy val commonSettings = Vector(
   organization := "io.rdbc.pool",
+  organizationName := "rdbc contributors",
   scalaVersion := "2.12.2",
   crossScalaVersions := Vector("2.11.11"),
 
   licenses := Vector(
     "Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.html")
   ),
-  headerLicense := Some(HeaderLicense.ALv2(Copyright.years, "Krzysztof Pado")),
+  startYear := Some(Copyright.startYear),
 
   homepage := Some(url("https://github.com/rdbc-io/rdbc-pool")),
   scmInfo := Some(
