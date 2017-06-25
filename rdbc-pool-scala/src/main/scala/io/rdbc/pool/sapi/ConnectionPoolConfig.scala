@@ -26,13 +26,14 @@ import scala.concurrent.duration._
 
 object ConnectionPoolConfig {
   def Default: ConnectionPoolConfig = {
+    val ec = ExecutionContext.global
     ConnectionPoolConfig(
       name = "unnamed",
-      ec = ExecutionContext.global,
+      ec = ec,
       validateTimeout = Timeout(5.seconds),
       connectTimeout = Timeout(5.seconds),
       rollbackTimeout = Timeout(5.seconds),
-      taskScheduler = () => new JdkScheduler(Executors.newSingleThreadScheduledExecutor()), //TODO oooooo
+      taskScheduler = () => new JdkScheduler(Executors.newSingleThreadScheduledExecutor())(ec), //TODO oooooo
       size = 20
     )
   }
