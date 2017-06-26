@@ -40,6 +40,7 @@ lazy val rdbcPoolRoot = (project in file("."))
   .aggregate(rdbcPoolScala)
 
 lazy val rdbcPoolScala = (project in file("rdbc-pool-scala"))
+  .enablePlugins(BuildInfoPlugin)
   .settings(commonSettings: _*)
   .settings(
     name := "rdbc-pool-scala",
