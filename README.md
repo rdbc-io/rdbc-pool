@@ -9,5 +9,4 @@ rdbc-pool is a connection pool implementation for [rdbc](https://github.com/rdbc
 
 ## Documentation
 
-Documentation is currently work in progress.
-
+See the documentation at [http://docs.pool.rdbc.io](http://docs.pool.rdbc.io).
