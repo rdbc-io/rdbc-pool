@@ -33,7 +33,13 @@ import scala.util.{Failure, Success}
 
 import io.rdbc.pool.internal.Compat._
 
-class ConnectionPool(connFact: ConnectionFactory, val config: ConnectionPoolConfig)
+object ConnectionPool {
+  def apply(connFact: ConnectionFactory, config: ConnectionPoolConfig): ConnectionPool = {
+    new ConnectionPool(connFact, config)
+  }
+}
+
+class ConnectionPool protected(connFact: ConnectionFactory, val config: ConnectionPoolConfig)
   extends ConnectionFactory
     with ConnectionFactoryPartialImpl
     with ConnectionReleaseListener

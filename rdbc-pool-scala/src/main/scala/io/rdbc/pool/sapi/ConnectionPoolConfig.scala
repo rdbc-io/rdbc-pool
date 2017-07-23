@@ -31,7 +31,9 @@ object ConnectionPoolConfig {
             validateTimeout: Timeout = Timeout(5.seconds),
             connectTimeout: Timeout = Timeout(5.seconds),
             rollbackTimeout: Timeout = Timeout(5.seconds),
-            taskScheduler: () => TaskScheduler = () => new JdkScheduler(Executors.newSingleThreadScheduledExecutor())(ExecutionContext.global), //TODO oooooo
+            taskScheduler: () => TaskScheduler = {
+              () => new JdkScheduler(Executors.newSingleThreadScheduledExecutor())(ExecutionContext.global)
+            }, //TODO oooooo
             ec: ExecutionContext = ExecutionContext.global): ConnectionPoolConfig = {
 
     new ConnectionPoolConfig(

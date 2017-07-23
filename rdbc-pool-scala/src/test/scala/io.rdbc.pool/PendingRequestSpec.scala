@@ -50,7 +50,7 @@ class PendingRequestSpec extends RdbcPoolSpec with MockFactory {
   }
 
   private def poolConnMock() = {
-    new PoolConnection(mock[Connection], ConnectionPoolConfig.Default, mock[ConnectionReleaseListener])
+    new PoolConnection(mock[Connection], ConnectionPoolConfig(), mock[ConnectionReleaseListener])
   }
 
 }
