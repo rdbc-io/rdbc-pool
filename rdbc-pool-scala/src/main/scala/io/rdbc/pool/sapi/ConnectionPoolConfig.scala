@@ -25,24 +25,32 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 object ConnectionPoolConfig {
-  def Default: ConnectionPoolConfig = {
-    val ec = ExecutionContext.global
-    ConnectionPoolConfig(
-      name = "unnamed",
-      ec = ec,
-      validateTimeout = Timeout(5.seconds),
-      connectTimeout = Timeout(5.seconds),
-      rollbackTimeout = Timeout(5.seconds),
-      taskScheduler = () => new JdkScheduler(Executors.newSingleThreadScheduledExecutor())(ec), //TODO oooooo
-      size = 20
+
+  def apply(name: String = "unnamed",
+            size: Int = 20,
+            validateTimeout: Timeout = Timeout(5.seconds),
+            connectTimeout: Timeout = Timeout(5.seconds),
+            rollbackTimeout: Timeout = Timeout(5.seconds),
+            taskScheduler: () => TaskScheduler = () => new JdkScheduler(Executors.newSingleThreadScheduledExecutor())(ExecutionContext.global), //TODO oooooo
+            ec: ExecutionContext = ExecutionContext.global): ConnectionPoolConfig = {
+
+    new ConnectionPoolConfig(
+      name = name,
+      size = size,
+      validateTimeout = validateTimeout,
+      connectTimeout = connectTimeout,
+      rollbackTimeout = rollbackTimeout,
+      taskScheduler = taskScheduler,
+      ec = ec
     )
   }
+
 }
 
-case class ConnectionPoolConfig(name: String,
-                                size: Int,
-                                validateTimeout: Timeout,
-                                connectTimeout: Timeout,
-                                rollbackTimeout: Timeout,
-                                taskScheduler: () => TaskScheduler,
-                                ec: ExecutionContext)
+class ConnectionPoolConfig(val name: String,
+                           val size: Int,
+                           val validateTimeout: Timeout,
+                           val connectTimeout: Timeout,
+                           val rollbackTimeout: Timeout,
+                           val taskScheduler: () => TaskScheduler,
+                           val ec: ExecutionContext)
