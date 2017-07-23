@@ -63,6 +63,7 @@ lazy val rdbcPoolDoc = (project in file("rdbc-pool-doc"))
   .settings(
     publishArtifact := false,
     mkdocsVariables := Map(
-      "version" -> version.value
+      "version" -> version.value,
+      "rdbc_version" -> Library.rdbcScalaApi.revision
     )
   )

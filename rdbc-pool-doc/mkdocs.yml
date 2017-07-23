@@ -4,6 +4,10 @@ site_dir: target
 strict: true
 pages:
     - Introduction: index.md
+    - Scala API user guide:
+      - Installation: scala/installation.md
+      - Creating a pool: scala/creating.md
+      - Configuration: scala/configuration.md
 theme: material
 
 copyright: Copyright &copy; 2016-2017 rdbc contributors

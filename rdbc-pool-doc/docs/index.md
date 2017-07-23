@@ -17,4 +17,26 @@
     rdbc-pool project and this documentation is still a work in progress.
     It's not ready yet for production use.
 
-TODO
+## What is rdbc-pool?
+
+rdbc-pool is a connection pool implementation for [rdbc](http://rdbc.io).
+
+## rdbc API
+
+You'll be using this connection pool along with the API which usage is not
+covered by this documentation. This guide describes things that are specific
+to the pool itself. Please head to the [API documentation site](http://docs.api.rdbc.io)
+for detailed information on API usage and general rdbc concepts.
+
+## Getting help
+
+Join [rdbc-io/rdbc](https://gitter.im/rdbc-io/rdbc) gitter channel for 
+questions and any kind of discussion about rdbc and the pool.
+
+See also [rdbc](https://stackoverflow.com/questions/tagged/rdbc)
+tag on StackOverflow.
+
+## License
+
+rdbc-pool is an open source software licensed under
+[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
