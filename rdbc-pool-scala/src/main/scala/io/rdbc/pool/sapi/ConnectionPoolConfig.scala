@@ -33,7 +33,7 @@ object ConnectionPoolConfig {
             rollbackTimeout: Timeout = Timeout(5.seconds),
             taskScheduler: () => TaskScheduler = {
               () => new JdkScheduler(Executors.newSingleThreadScheduledExecutor())(ExecutionContext.global)
-            }, //TODO oooooo
+            },
             ec: ExecutionContext = ExecutionContext.global): ConnectionPoolConfig = {
 
     new ConnectionPoolConfig(
@@ -42,8 +42,8 @@ object ConnectionPoolConfig {
       validateTimeout = validateTimeout,
       connectTimeout = connectTimeout,
       rollbackTimeout = rollbackTimeout,
-      taskScheduler = taskScheduler,
-      ec = ec
+      taskSchedulerFactory = taskScheduler,
+      executionContext = ec
     )
   }
 
@@ -54,5 +54,5 @@ class ConnectionPoolConfig(val name: String,
                            val validateTimeout: Timeout,
                            val connectTimeout: Timeout,
                            val rollbackTimeout: Timeout,
-                           val taskScheduler: () => TaskScheduler,
-                           val ec: ExecutionContext)
+                           val taskSchedulerFactory: () => TaskScheduler,
+                           val executionContext: ExecutionContext)
