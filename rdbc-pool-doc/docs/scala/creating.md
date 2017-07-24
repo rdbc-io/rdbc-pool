@@ -25,7 +25,7 @@ underlying factory provided by client during pool creation.
 ## Creating a pool
 
 The pool is implemented in [`ConnectionPool`]() class.  To create instance of
-the pool use `ConnectionPool`'s companion object `apply` method as follows:
+the pool use `ConnectionPool` companion object's `apply` method as follows:
 
 ```
 #!scala
@@ -41,7 +41,7 @@ val pool = ConnectionPool(cf, ConnectionPoolConfig())
 To create the pool you first need to create and configure a connection factory
 provided by rdbc driver you use (see the line 4 in the above snippet) and then
 pass it as the `ConnectionPool#apply` argument (line 6). The second argument
-of the method is [`ConnectionPoolConfig`]() instance holding the pool
+of the `apply` method is [`ConnectionPoolConfig`]() instance holding the pool
 configuration. See [configuration]() chapter for available configuration options.
 
 ## Closing a pool

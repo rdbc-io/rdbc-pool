@@ -27,7 +27,7 @@ private[pool] class PoolConnection(private[pool] val underlying: Connection,
                                    releaseListener: ConnectionReleaseListener)
   extends Connection {
 
-  private implicit val ec = poolConfig.ec
+  private implicit val ec = poolConfig.executionContext
 
   def beginTx()(implicit timeout: Timeout): Future[Unit] = {
     underlying.beginTx()

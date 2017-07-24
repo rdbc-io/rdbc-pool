@@ -45,10 +45,10 @@ class ConnectionPool protected(connFact: ConnectionFactory, val config: Connecti
     with ConnectionReleaseListener
     with Logging {
 
-  protected implicit val ec: ExecutionContext = config.ec
+  protected implicit val ec: ExecutionContext = config.executionContext
 
   private val connManager = new ConnectionManager(config.size)
-  private val taskScheduler = config.taskScheduler()
+  private val taskScheduler = config.taskSchedulerFactory()
   private val timeoutScheduler = new TimeoutScheduler(connManager, taskScheduler)
 
   private val _active = new AtomicBoolean(true)
