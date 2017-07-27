@@ -41,28 +41,40 @@ private[pool] class ConnectionManager(poolSize: Int)
     }
   }
 
-  def selectRequestOrAddActiveToIdle(conn: PoolConnection): Option[PendingRequest] = {
+  def selectRequestOrAddActiveToIdle(conn: PoolConnection): Try[Option[PendingRequest]] = {
     atomic { implicit tx =>
-      dequeuePendingRequest() match {
-        case s@Some(_) => s
-        case None =>
-          removeActiveInternal(conn)
-          addIdleInternal(conn)
-          None
+      if (active().contains(conn)) {
+        Success(
+          dequeuePendingRequest() match {
+            case s@Some(_) => s
+            case None =>
+              removeActiveInternal(conn)
+              addIdleInternal(conn)
+              None
+          }
+        )
+      } else {
+        Failure(new IllegalStateException(s"Connection '$conn' is not in the active set"))
       }
     }
   }
 
-  def selectRequestOrAddNewToIdle(conn: PoolConnection): Option[PendingRequest] = {
+  def selectRequestOrAddNewToIdle(conn: PoolConnection): Try[Option[PendingRequest]] = {
     atomic { implicit tx =>
-      decrementConnectingCount()
-      dequeuePendingRequest() match {
-        case Some(req) =>
-          addActiveInternal(conn)
-          Some(req)
-        case None =>
-          addIdleInternal(conn)
-          None
+      if (idle().contains(conn) || active().contains(conn)) {
+        Failure(new IllegalStateException(s"Connection '$conn' is already managed"))
+      } else {
+        decrementConnectingCount().map { _ =>
+          dequeuePendingRequest() match {
+            case Some(req) =>
+              addActiveInternal(conn)
+              Some(req)
+
+            case None =>
+              addIdleInternal(conn)
+              None
+          }
+        }
       }
     }
   }
@@ -101,9 +113,9 @@ private[pool] class ConnectionManager(poolSize: Int)
     }
   }
 
-  def clearConnections(): Vector[PoolConnection] = {
+  def clearConnections(): Set[PoolConnection] = {
     atomic { implicit tx =>
-      val conns = (active() ++ idle()).toVector
+      val conns = active() ++ idle()
       active() = Set.empty
       idle() = Set.empty
       connectingCount() = 0
