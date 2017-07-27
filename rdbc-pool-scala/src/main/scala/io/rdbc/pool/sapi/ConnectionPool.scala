@@ -18,7 +18,6 @@ package io.rdbc.pool.sapi
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import io.rdbc.ImmutSeq
 import io.rdbc.api.exceptions.{ConnectionValidationException, IllegalSessionStateException}
 import io.rdbc.implbase.ConnectionFactoryPartialImpl
 import io.rdbc.pool.internal.manager.ConnectionManager
@@ -29,7 +28,7 @@ import io.rdbc.util.Logging
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 import io.rdbc.pool.internal.Compat._
 
@@ -73,7 +72,7 @@ class ConnectionPool protected(connFact: ConnectionFactory, val config: Connecti
       logger.info(s"Shutting down '${config.name}' pool")
       val conns = connManager.clearConnections()
 
-      foldShutdownFutures(conns.map(_.underlying.forceRelease()) :+ connFact.shutdown())
+      foldShutdownFutures(conns.map(_.underlying.forceRelease()) + connFact.shutdown())
         .andThen { case _ =>
           taskScheduler.shutdown()
         }
@@ -89,8 +88,11 @@ class ConnectionPool protected(connFact: ConnectionFactory, val config: Connecti
     ifActive {
       conn.rollbackTx()(config.rollbackTimeout)
         .flatMap(_ => conn.validate()(config.validateTimeout))
-        .map { _ =>
-          connManager.selectRequestOrAddActiveToIdle(conn).foreach(_.success(conn))
+        .flatMap { _ =>
+          Future.fromTry(connManager.selectRequestOrAddActiveToIdle(conn))
+            .map { maybePendingReq =>
+              maybePendingReq.foreach(_.success(conn))
+            }
         }
         .recoverWith(handleReceiveConnErrors(conn))
     }
@@ -131,16 +133,18 @@ class ConnectionPool protected(connFact: ConnectionFactory, val config: Connecti
   private def useAtMostOneIdle(): Unit = {
     maybeValidIdle().foreach { maybeConn =>
       maybeConn.foreach { conn =>
-        val maybeReq = connManager.selectRequestOrAddActiveToIdle(conn)
-        maybeReq.foreach(_.success(conn))
+        connManager.selectRequestOrAddActiveToIdle(conn).map { maybeReq =>
+          maybeReq.foreach(_.success(conn))
+        }
       }
     }
   }
 
-  private def acceptNewConnection(conn: PoolConnection): Unit = {
+  private def acceptNewConnection(conn: PoolConnection): Try[Unit] = {
     logger.debug(s"Pool '${config.name}' successfully established a new connection")
-    val maybePendingReq = connManager.selectRequestOrAddNewToIdle(conn)
-    maybePendingReq.foreach(_.success(conn))
+    connManager.selectRequestOrAddNewToIdle(conn).map { maybePendingReq =>
+      maybePendingReq.foreach(_.success(conn))
+    }
   }
 
   private def openNewConnectionIfAtDeficit(): Future[Option[PoolConnection]] = {
@@ -153,8 +157,9 @@ class ConnectionPool protected(connFact: ConnectionFactory, val config: Connecti
         }
         .transformWith {
           case Success(Some(poolConn)) =>
-            acceptNewConnection(poolConn)
-            Future.successful(Some(poolConn))
+            Future.fromTry(acceptNewConnection(poolConn)).map { _ =>
+              Some(poolConn)
+            }
 
           case Failure(ex) =>
             logWarnException(s"Pool '${config.name}' could not establish a new connection", ex)
@@ -203,7 +208,7 @@ class ConnectionPool protected(connFact: ConnectionFactory, val config: Connecti
     }
   }
 
-  private def foldShutdownFutures(futures: ImmutSeq[Future[Unit]]): Future[Unit] = {
+  private def foldShutdownFutures(futures: Set[Future[Unit]]): Future[Unit] = {
     futures.foldLeft(Future.unit) { (f1, f2) =>
       f1.transformWith {
         case Success(_) => f2
