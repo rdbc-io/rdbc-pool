@@ -21,9 +21,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import io.rdbc.ImmutSeq
 import io.rdbc.api.exceptions.{ConnectionValidationException, IllegalSessionStateException}
 import io.rdbc.implbase.ConnectionFactoryPartialImpl
-import io.rdbc.pool.PoolInactiveException
 import io.rdbc.pool.internal.manager.ConnectionManager
 import io.rdbc.pool.internal.{ConnectionReleaseListener, PendingRequest, PoolConnection, TimeoutScheduler}
+import io.rdbc.pool.{PoolInactiveException, PoolInternalErrorException}
 import io.rdbc.sapi.{Connection, ConnectionFactory, Timeout}
 import io.rdbc.util.Logging
 
@@ -98,15 +98,16 @@ class ConnectionPool protected(connFact: ConnectionFactory, val config: Connecti
 
   private[pool] def activeConnectionForceReleased(conn: PoolConnection): Future[Unit] = {
     ifActive {
-      connManager.removeActive(conn)
-      conn.underlying.forceRelease()
-        .recover {
-          case NonFatal(ex) =>
-            logWarnException(s"Pool '${config.name}' could not release a connection", ex)
-        }
-        .andThen { case _ =>
-          fillPoolIfAtDeficit()
-        }
+      Future.fromTry(connManager.removeActive(conn)).flatMap { _ =>
+        conn.underlying.forceRelease()
+          .recover {
+            case NonFatal(ex) =>
+              logWarnException(s"Pool '${config.name}' could not release a connection", ex)
+          }
+          .andThen { case _ =>
+            fillPoolIfAtDeficit()
+          }
+      }
     }
   }
 
@@ -150,11 +151,22 @@ class ConnectionPool protected(connFact: ConnectionFactory, val config: Connecti
           conn.validate()(config.validateTimeout)
             .map(_ => Some(new PoolConnection(conn, config, this)))
         }
-        .andThen {
-          case Success(Some(poolConn)) => acceptNewConnection(poolConn)
+        .transformWith {
+          case Success(Some(poolConn)) =>
+            acceptNewConnection(poolConn)
+            Future.successful(Some(poolConn))
+
           case Failure(ex) =>
             logWarnException(s"Pool '${config.name}' could not establish a new connection", ex)
-            connManager.decrementConnectingCount()
+            connManager.decrementConnectingCount() match {
+              case Success(_) => Future.failed(ex)
+              case Failure(decrementEx) =>
+                val internalError = new PoolInternalErrorException(
+                  "Attempted to decrement connecting count but it was already non-positive",
+                  decrementEx)
+                logger.error(internalError.getMessage, internalError)
+                Future.failed(internalError)
+            }
         }
     } else {
       Future.successful(None)

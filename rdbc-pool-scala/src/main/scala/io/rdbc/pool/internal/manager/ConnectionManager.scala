@@ -20,6 +20,7 @@ import io.rdbc.pool.internal.{PendingReqQueue, PendingRequest, PoolConnection}
 import io.rdbc.util.Logging
 
 import scala.concurrent.stm.{InTxn, Ref, Txn, atomic}
+import scala.util.{Failure, Success, Try}
 
 private[pool] class ConnectionManager(poolSize: Int)
   extends Logging {
@@ -29,9 +30,14 @@ private[pool] class ConnectionManager(poolSize: Int)
   private[manager] val active = Ref(Set.empty[PoolConnection])
   private[manager] val connectingCount = Ref(0)
 
-  def removeActive(conn: PoolConnection): Unit = {
+  def removeActive(conn: PoolConnection): Try[Unit] = {
     atomic { implicit tx =>
-      removeActiveInternal(conn)
+      if (active().contains(conn)) {
+        removeActiveInternal(conn)
+        Success(())
+      } else {
+        Failure(new IllegalStateException(s"Connection '$conn' is not in active set"))
+      }
     }
   }
 
@@ -71,9 +77,12 @@ private[pool] class ConnectionManager(poolSize: Int)
     }
   }
 
-  def decrementConnectingCount(): Int = {
+  def decrementConnectingCount(): Try[Int] = {
     atomic { implicit tx =>
-      decrementConnectingCountInternal()
+      if (connectingCount() > 0) {
+        connectingCount() = connectingCount() - 1
+        Success(connectingCount())
+      } else Failure(new IllegalStateException("Connecting count is not positive"))
     }
   }
 
@@ -166,10 +175,4 @@ private[pool] class ConnectionManager(poolSize: Int)
     connectingCount() = connectingCount() + 1
     connectingCount()
   }
-
-  private def decrementConnectingCountInternal()(implicit tx: InTxn): Int = {
-    connectingCount() = connectingCount() - 1
-    connectingCount()
-  }
-
 }
