@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package io.rdbc.pool
+package io.rdbc.pool.internal
 
-import io.rdbc.pool.internal.{PendingReqQueue, PendingRequest}
+import io.rdbc.pool.RdbcPoolSpec
 
 class PendingReqQueueSpec extends RdbcPoolSpec {
 

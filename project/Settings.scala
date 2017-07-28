@@ -79,4 +79,10 @@ object Settings {
       )
     )
   )
+
+  val testConf = Vector(
+    logBuffered in Test := false,
+    parallelExecution in Test := false,
+    testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
+  )
 }

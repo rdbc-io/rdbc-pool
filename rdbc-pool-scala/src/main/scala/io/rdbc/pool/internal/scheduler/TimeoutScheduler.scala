@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package io.rdbc.pool.internal
+package io.rdbc.pool.internal.scheduler
 
 import io.rdbc.api.exceptions.TimeoutException
+import io.rdbc.pool.internal.PendingRequest
 import io.rdbc.pool.internal.manager.ConnectionManager
 import io.rdbc.sapi.Timeout
 import io.rdbc.util.Logging
@@ -25,6 +26,7 @@ import io.rdbc.util.scheduler.TaskScheduler
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
+private[pool]
 class TimeoutScheduler(poolManager: ConnectionManager,
                        taskScheduler: TaskScheduler)
                       (implicit ec: ExecutionContext)
@@ -36,11 +38,14 @@ class TimeoutScheduler(poolManager: ConnectionManager,
       val task = taskScheduler.schedule(finiteTimeout) { () =>
         timeoutPendingReq(req, finiteTimeout)
       }
-      req.connection.foreach(_ => task.cancel())
+      req.connection.onComplete { _ =>
+        task.cancel()
+      }
     }
   }
 
-  private def timeoutPendingReq(req: PendingRequest, timeout: FiniteDuration): Unit = {
+  private[scheduler]
+  def timeoutPendingReq(req: PendingRequest, timeout: FiniteDuration): Unit = {
     val existed = poolManager.evictRequestIfExists(req)
     if (existed) {
       logger.debug(s"Failing connection request '$req' because of a timeout after $timeout")
