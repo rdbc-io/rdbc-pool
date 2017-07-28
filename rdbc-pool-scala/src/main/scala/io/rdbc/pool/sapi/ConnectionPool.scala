@@ -30,8 +30,6 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
-import io.rdbc.pool.internal.Compat._
-
 object ConnectionPool {
   def apply(connFact: ConnectionFactory, config: ConnectionPoolConfig): ConnectionPool = {
     new ConnectionPool(connFact, config)
@@ -153,7 +151,7 @@ class ConnectionPool protected(connFact: ConnectionFactory, val config: Connecti
       connFact.connection()(config.connectTimeout)
         .flatMap { conn =>
           conn.validate()(config.validateTimeout)
-            .map(_ => Some(new PoolConnection(conn, config, this)))
+            .map(_ => Some(new PoolConnection(conn, config.name, this)))
         }
         .transformWith {
           case Success(Some(poolConn)) =>
