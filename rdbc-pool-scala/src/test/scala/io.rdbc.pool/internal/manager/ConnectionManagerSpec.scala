@@ -16,11 +16,10 @@
 
 package io.rdbc.pool.internal.manager
 
-import io.rdbc.pool.RdbcPoolSpec
-import io.rdbc.pool.internal.{ConnectionReleaseListener, PendingReqQueue, PendingRequest, PoolConnection}
-import io.rdbc.pool.sapi.ConnectionPoolConfig
+import io.rdbc.pool.internal.{PendingReqQueue, PendingRequest, PoolConnection}
+import io.rdbc.pool.{MockableConnReleaseListener, RdbcPoolSpec}
 import io.rdbc.sapi.Connection
-import org.scalamock.scalatest.proxy.MockFactory
+import org.scalamock.scalatest.MockFactory
 import org.scalatest.Inside
 
 import scala.concurrent.stm._
@@ -363,7 +362,7 @@ class ConnectionManagerSpec
   }
 
   private def poolConnMock() = {
-    new PoolConnection(mock[Connection], ConnectionPoolConfig(), mock[ConnectionReleaseListener])
+    new PoolConnection(mock[Connection], "pool", mock[MockableConnReleaseListener])
   }
 
 }

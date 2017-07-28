@@ -30,6 +30,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
+import io.rdbc.pool.internal.Compat._
+
 object ConnectionPool {
   def apply(connFact: ConnectionFactory, config: ConnectionPoolConfig): ConnectionPool = {
     new ConnectionPool(connFact, config)

@@ -16,14 +16,17 @@
 
 package io.rdbc.pool
 
-import io.rdbc.pool.internal.{ConnectionReleaseListener, PendingRequest, PoolConnection}
-import io.rdbc.pool.sapi.ConnectionPoolConfig
+import io.rdbc.pool.internal.{PendingRequest, PoolConnection}
 import io.rdbc.sapi.Connection
-import org.scalamock.scalatest.proxy.MockFactory
+import org.scalamock.scalatest.MockFactory
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
-class PendingRequestSpec extends RdbcPoolSpec with MockFactory {
+class PendingRequestSpec
+  extends RdbcPoolSpec
+    with MockFactory {
+
+  implicit private val ec = ExecutionContext.global
 
   "A pending request" should {
     "Complete connection future successfully" in {
@@ -50,7 +53,7 @@ class PendingRequestSpec extends RdbcPoolSpec with MockFactory {
   }
 
   private def poolConnMock() = {
-    new PoolConnection(mock[Connection], ConnectionPoolConfig(), mock[ConnectionReleaseListener])
+    new PoolConnection(mock[Connection], "pool", mock[MockableConnReleaseListener])
   }
 
 }
