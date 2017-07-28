@@ -16,18 +16,14 @@
 
 package io.rdbc.pool.internal
 
-import io.rdbc.pool.sapi.ConnectionPoolConfig
 import io.rdbc.sapi._
 
 import scala.concurrent.Future
 
-
 private[pool] class PoolConnection(private[pool] val underlying: Connection,
-                                   poolConfig: ConnectionPoolConfig,
+                                   poolName: String,
                                    releaseListener: ConnectionReleaseListener)
   extends Connection {
-
-  private implicit val ec = poolConfig.executionContext
 
   def beginTx()(implicit timeout: Timeout): Future[Unit] = {
     underlying.beginTx()
@@ -75,9 +71,9 @@ private[pool] class PoolConnection(private[pool] val underlying: Connection,
     underlying.statement(sqlWithParams)
   }
 
-  def watchForIdle: Future[PoolConnection.this.type] = {
-    underlying.watchForIdle.map(_ => this)
+  def watchForIdle: Future[Unit] = {
+    underlying.watchForIdle
   }
 
-  override def toString: String = s"pool-${poolConfig.name}{$underlying}"
+  override lazy val toString: String = s"pool-$poolName-$underlying"
 }

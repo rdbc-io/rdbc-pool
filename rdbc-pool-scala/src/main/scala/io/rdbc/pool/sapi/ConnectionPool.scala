@@ -153,7 +153,7 @@ class ConnectionPool protected(connFact: ConnectionFactory, val config: Connecti
       connFact.connection()(config.connectTimeout)
         .flatMap { conn =>
           conn.validate()(config.validateTimeout)
-            .map(_ => Some(new PoolConnection(conn, config, this)))
+            .map(_ => Some(new PoolConnection(conn, config.name, this)))
         }
         .transformWith {
           case Success(Some(poolConn)) =>
