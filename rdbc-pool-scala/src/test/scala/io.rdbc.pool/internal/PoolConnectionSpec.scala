@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package io.rdbc.pool
+package io.rdbc.pool.internal
 
-import io.rdbc.pool.internal.PoolConnection
+import io.rdbc.pool.{MockableConnReleaseListener, RdbcPoolSpec}
 import io.rdbc.sapi._
 import org.scalamock.scalatest.MockFactory
 

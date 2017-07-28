@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import io.rdbc.api.exceptions.{ConnectionValidationException, IllegalSessionStateException}
 import io.rdbc.implbase.ConnectionFactoryPartialImpl
 import io.rdbc.pool.internal.manager.ConnectionManager
-import io.rdbc.pool.internal.{ConnectionReleaseListener, PendingRequest, PoolConnection, TimeoutScheduler}
+import io.rdbc.pool.internal.{ConnectionReleaseListener, PendingRequest, PoolConnection}
 import io.rdbc.pool.{PoolInactiveException, PoolInternalErrorException}
 import io.rdbc.sapi.{Connection, ConnectionFactory, Timeout}
 import io.rdbc.util.Logging
@@ -29,8 +29,8 @@ import io.rdbc.util.Logging
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
-
 import io.rdbc.pool.internal.Compat._
+import io.rdbc.pool.internal.scheduler.TimeoutScheduler
 
 object ConnectionPool {
   def apply(connFact: ConnectionFactory, config: ConnectionPoolConfig): ConnectionPool = {

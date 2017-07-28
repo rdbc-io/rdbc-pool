@@ -30,7 +30,7 @@ lazy val commonSettings = Vector(
   }),
 
   scalastyleFailOnError := true
-) ++ compilationConf ++ scaladocConf ++ developersConf ++ publishConf
+) ++ compilationConf ++ scaladocConf ++ developersConf ++ publishConf ++ testConf
 
 lazy val rdbcPoolRoot = (project in file("."))
   .settings(commonSettings: _*)
