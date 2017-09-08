@@ -8,6 +8,6 @@ object Library {
   val rdbcUtil = "io.rdbc" %% "rdbc-util" % rdbcVersion
   val stm = "org.scala-stm" %% "scala-stm" % "0.8"
 
-  val scalatest = "org.scalatest" %% "scalatest" % "3.0.3" % Test
+  val scalatest = "org.scalatest" %% "scalatest" % "3.0.4" % Test
   val scalamock = "org.scalamock" %% "scalamock-scalatest-support" % "3.6.0" % Test
 }
