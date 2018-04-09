@@ -18,7 +18,7 @@ package io.rdbc.pool.internal.scheduler
 
 import java.util.concurrent.Executors
 
-import io.rdbc.api.exceptions.TimeoutException
+import io.rdbc.sapi.exceptions.TimeoutException
 import io.rdbc.pool.RdbcPoolSpec
 import io.rdbc.pool.internal.manager.ConnectionManager
 import io.rdbc.pool.internal.{PendingRequest, PoolConnection}
