@@ -16,7 +16,7 @@
 
 package io.rdbc.pool.internal.scheduler
 
-import io.rdbc.api.exceptions.TimeoutException
+import io.rdbc.sapi.exceptions.TimeoutException
 import io.rdbc.pool.internal.PendingRequest
 import io.rdbc.pool.internal.manager.ConnectionManager
 import io.rdbc.sapi.Timeout
@@ -49,7 +49,7 @@ class TimeoutScheduler(poolManager: ConnectionManager,
     val existed = poolManager.evictRequestIfExists(req)
     if (existed) {
       logger.debug(s"Failing connection request '$req' because of a timeout after $timeout")
-      req.failure(new TimeoutException(timeout))
+      req.failure(new TimeoutException(Timeout(timeout)))
     }
   }
 

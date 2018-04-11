@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
-package io.rdbc.pool
+package io.rdbc.pool.sapi
 
-import io.rdbc.api.exceptions.UncategorizedRdbcException
+import io.rdbc.sapi.exceptions.UncategorizedRdbcException
 
-class PoolInactiveException(val poolName: String)
-  extends UncategorizedRdbcException(s"Pool '$poolName' is shut down")
+class PoolInternalErrorException(msg: String, cause: Throwable)
+  extends UncategorizedRdbcException(
+    s"THIS MOST LIKELY IS A BUG OF THE POOL IMPLEMENTATION: $msg",
+    Some(cause)
+  )

@@ -18,11 +18,10 @@ package io.rdbc.pool.sapi
 
 import java.util.concurrent.atomic.AtomicBoolean
 
-import io.rdbc.api.exceptions.{ConnectionValidationException, IllegalSessionStateException}
+import io.rdbc.sapi.exceptions.{ConnectionValidationException, IllegalSessionStateException}
 import io.rdbc.implbase.ConnectionFactoryPartialImpl
 import io.rdbc.pool.internal.manager.ConnectionManager
 import io.rdbc.pool.internal.{ConnectionReleaseListener, PendingRequest, PoolConnection}
-import io.rdbc.pool.{PoolInactiveException, PoolInternalErrorException}
 import io.rdbc.sapi.{Connection, ConnectionFactory, Timeout}
 import io.rdbc.util.Logging
 

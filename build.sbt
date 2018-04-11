@@ -10,7 +10,7 @@ lazy val commonSettings = Vector(
   organization := "io.rdbc.pool",
   organizationName := "rdbc contributors",
   scalaVersion := "2.12.4",
-  crossScalaVersions := Vector(scalaVersion.value, "2.11.11"),
+  crossScalaVersions := Vector(scalaVersion.value, "2.11.12"),
 
   licenses := Vector(
     "Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.html")
@@ -49,8 +49,8 @@ lazy val rdbcPoolScala = (project in file("rdbc-pool-scala"))
       Library.rdbcImplbase,
       Library.rdbcUtil,
       Library.stm,
-      Library.scalatest,
-      Library.scalamock
+      Library.scalatest % Test,
+      Library.scalamock % Test
     ),
     scalacOptions in(Compile, doc) ++= Vector(
       "-doc-title", "rdbc connection pool"
