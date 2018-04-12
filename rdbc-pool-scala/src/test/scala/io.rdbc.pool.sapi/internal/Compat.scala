@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package io.rdbc.pool.internal
+package io.rdbc.pool.sapi.internal
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.Future
 
 private[pool] object Compat {
 
@@ -25,15 +24,4 @@ private[pool] object Compat {
     val unit: Future[Unit] = Future.successful(())
   }
 
-  implicit class FutureCompat[+T](underlying: Future[T]) {
-
-    def transformWith[S](f: Try[T] => Future[S])
-                        (implicit executor: ExecutionContext): Future[S] = {
-      underlying.flatMap { res =>
-        f(Success(res))
-      }.recoverWith { case ex =>
-        f(Failure(ex))
-      }
-    }
-  }
 }

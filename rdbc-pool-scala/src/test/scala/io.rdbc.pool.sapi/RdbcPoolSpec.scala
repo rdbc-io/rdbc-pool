@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.rdbc.pool
+package io.rdbc.pool.sapi
 
 import org.scalatest.{Matchers, WordSpec}
 

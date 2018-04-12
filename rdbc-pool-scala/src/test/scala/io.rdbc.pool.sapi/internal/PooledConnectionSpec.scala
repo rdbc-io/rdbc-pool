@@ -14,22 +14,23 @@
  * limitations under the License.
  */
 
-package io.rdbc.pool.internal
+package io.rdbc.pool.sapi.internal
 
-import io.rdbc.pool.{MockableConnReleaseListener, RdbcPoolSpec}
+import io.github.povder.unipool.sapi.PooledResourceHandler
+import io.rdbc.pool.sapi.internal.Compat._
+import io.rdbc.pool.sapi.RdbcPoolSpec
 import io.rdbc.sapi._
 import org.scalamock.scalatest.MockFactory
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
-import io.rdbc.pool.internal.Compat._
-
-class PoolConnectionSpec
+class PooledConnectionSpec
   extends RdbcPoolSpec
     with MockFactory {
 
-  private val poolName = "pool"
+  private implicit val ec = ExecutionContext.global
+  private implicit val timeout = Timeout(10.seconds)
 
   "PoolConnection" should {
     "forward beginTx calls" in {
@@ -125,29 +126,29 @@ class PoolConnectionSpec
     }
     */
 
-    "notify about a connection release" in {
-      val listener = mock[MockableConnReleaseListener]
-      val conn = poolConn(listener)
+    "return itself to pool on release" in {
+      val handler = mock[PooledResourceHandler[PooledConnection]]
+      val conn = poolConn(handler)
       val res = Future.unit
-      (listener.connReleased(_: PoolConnection)).expects(conn).once().returning(res)
-      conn.release() shouldBe theSameInstanceAs(res)
+      (handler.returnResource(_: PooledConnection)).expects(conn).once().returning(res)
+      conn.release().get shouldBe(())
     }
 
-    "notify about a connection force release" in {
-      val listener = mock[MockableConnReleaseListener]
-      val conn = poolConn(listener)
+    "destroy itself on force release" in {
+      val handler = mock[PooledResourceHandler[PooledConnection]]
+      val conn = poolConn(handler)
       val res = Future.unit
-      (listener.connForceReleased(_: PoolConnection)).expects(conn).once().returning(res)
-      conn.forceRelease() shouldBe theSameInstanceAs(res)
+      (handler.destroyResource(_: PooledConnection)).expects(conn).once().returning(res)
+      conn.forceRelease().get shouldBe(())
     }
   }
 
-  private def poolConn(connReleaseListener: MockableConnReleaseListener): PoolConnection = {
-    new PoolConnection(mock[Connection], poolName, connReleaseListener)
+  private def poolConn(handler: PooledResourceHandler[PooledConnection]): PooledConnection = {
+    new PooledConnection(mock[Connection], handler)
   }
 
-  private def poolConn(): PoolConnection = {
-    poolConn(mock[MockableConnReleaseListener])
+  private def poolConn(): PooledConnection = {
+    poolConn(mock[PooledResourceHandler[PooledConnection]])
   }
 
 }
