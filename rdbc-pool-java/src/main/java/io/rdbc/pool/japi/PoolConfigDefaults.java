@@ -14,21 +14,10 @@
  * limitations under the License.
  */
 
-package io.rdbc.pool
+package io.rdbc.pool.japi;
 
-import io.rdbc.pool.internal.{ConnectionReleaseListener, PoolConnection}
+import io.github.povder.unipool.japi.PoolConfig;
 
-import scala.concurrent.Future
-
-trait MockableConnReleaseListener extends ConnectionReleaseListener {
-  private[pool] def activeConnectionReleased(conn: PoolConnection): Future[Unit] = {
-    connReleased(conn)
-  }
-
-  private[pool] def activeConnectionForceReleased(conn: PoolConnection): Future[Unit] = {
-    connForceReleased(conn)
-  }
-
-  def connReleased(conn: PoolConnection): Future[Unit]
-  def connForceReleased(conn: PoolConnection): Future[Unit]
+abstract class PoolConfigDefaults {
+    static PoolConfig UNIPOOL_DEFAULTS = PoolConfig.builder().build();
 }

@@ -16,10 +16,14 @@
 
 package io.rdbc.pool.sapi
 
-import io.rdbc.sapi.exceptions.UncategorizedRdbcException
+import io.rdbc.sapi.Timeout
 
-class PoolInternalErrorException(msg: String, cause: Throwable)
-  extends UncategorizedRdbcException(
-    s"THIS MOST LIKELY IS A BUG OF THE POOL IMPLEMENTATION: $msg",
-    Some(cause)
-  )
+import scala.concurrent.{Await, Awaitable}
+
+package object internal {
+
+  implicit class AwaitableOps[T](a: Awaitable[T]) {
+    def get(implicit atMost: Timeout): T = Await.result(a, atMost.value)
+  }
+
+}

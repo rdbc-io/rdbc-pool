@@ -37,7 +37,7 @@ lazy val rdbcPoolRoot = (project in file("."))
   .settings(
     publishArtifact := false
   )
-  .aggregate(rdbcPoolScala)
+  .aggregate(rdbcPoolScala, rdbcPoolJava)
 
 lazy val rdbcPoolScala = (project in file("rdbc-pool-scala"))
   .enablePlugins(BuildInfoPlugin)
@@ -45,10 +45,9 @@ lazy val rdbcPoolScala = (project in file("rdbc-pool-scala"))
   .settings(
     name := "rdbc-pool-scala",
     libraryDependencies ++= Vector(
+      Library.unipoolScala,
       Library.rdbcScalaApi,
       Library.rdbcImplbase,
-      Library.rdbcUtil,
-      Library.stm,
       Library.scalatest % Test,
       Library.scalamock % Test
     ),
@@ -57,6 +56,18 @@ lazy val rdbcPoolScala = (project in file("rdbc-pool-scala"))
     ),
     buildInfoPackage := "io.rdbc.pool"
   )
+
+lazy val rdbcPoolJava = (project in file("rdbc-pool-java"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "rdbc-pool-java",
+    libraryDependencies ++= Vector(
+      Library.unipoolJava,
+      Library.rdbcJavaApi,
+      Library.slf4j,
+      Library.immutables % Provided
+    )
+  ).dependsOn(rdbcPoolScala)
 
 lazy val rdbcPoolDoc = (project in file("rdbc-pool-doc"))
   .enablePlugins(TemplateReplace)

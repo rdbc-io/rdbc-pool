@@ -26,22 +26,35 @@ import scala.concurrent.duration._
 
 object ConnectionPoolConfig {
 
-  def apply(name: String = "unnamed",
-            size: Int = 20,
-            validateTimeout: Timeout = Timeout(5.seconds),
-            connectTimeout: Timeout = Timeout(5.seconds),
-            rollbackTimeout: Timeout = Timeout(5.seconds),
-            taskScheduler: () => TaskScheduler = {
-              () => new JdkScheduler(Executors.newSingleThreadScheduledExecutor())(ExecutionContext.global)
-            },
-            ec: ExecutionContext = ExecutionContext.global): ConnectionPoolConfig = {
+  object Defaults {
+    val Name: String = "unnamed"
+    val Size: Int = 20
+    val ConnectionBorrowTimeout: Timeout = Timeout(5.seconds)
+    val ConnectionValidateTimeout: Timeout = Timeout(5.seconds)
+    val ConnectionCreateTimeout: Timeout = Timeout(5.seconds)
+    val ConnectionRollbackTimeout: Timeout = Timeout(5.seconds)
+    val TaskScheduler: () => TaskScheduler = {
+      () => new JdkScheduler(Executors.newSingleThreadScheduledExecutor())(ExecutionContext.global)
+    }
+    val ExecContext: ExecutionContext = ExecutionContext.global
+  }
+
+  def apply(name: String = Defaults.Name,
+            size: Int = Defaults.Size,
+            connectionBorrowTimeout: Timeout = Defaults.ConnectionBorrowTimeout,
+            connectionValidateTimeout: Timeout = Defaults.ConnectionValidateTimeout,
+            connectionCreateTimeout: Timeout = Defaults.ConnectionCreateTimeout,
+            connectionRollbackTimeout: Timeout = Defaults.ConnectionRollbackTimeout,
+            taskScheduler: () => TaskScheduler = Defaults.TaskScheduler,
+            ec: ExecutionContext = Defaults.ExecContext): ConnectionPoolConfig = {
 
     new ConnectionPoolConfig(
       name = name,
       size = size,
-      validateTimeout = validateTimeout,
-      connectTimeout = connectTimeout,
-      rollbackTimeout = rollbackTimeout,
+      connectionBorrowTimeout = connectionBorrowTimeout,
+      connectionValidateTimeout = connectionValidateTimeout,
+      connectionCreateTimeout = connectionCreateTimeout,
+      connectionRollbackTimeout = connectionRollbackTimeout,
       taskSchedulerFactory = taskScheduler,
       executionContext = ec
     )
@@ -51,8 +64,9 @@ object ConnectionPoolConfig {
 
 class ConnectionPoolConfig(val name: String,
                            val size: Int,
-                           val validateTimeout: Timeout,
-                           val connectTimeout: Timeout,
-                           val rollbackTimeout: Timeout,
+                           val connectionBorrowTimeout: Timeout,
+                           val connectionValidateTimeout: Timeout,
+                           val connectionCreateTimeout: Timeout,
+                           val connectionRollbackTimeout: Timeout,
                            val taskSchedulerFactory: () => TaskScheduler,
                            val executionContext: ExecutionContext)

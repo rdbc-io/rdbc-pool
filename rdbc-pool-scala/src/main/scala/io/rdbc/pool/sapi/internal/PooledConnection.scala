@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
-package io.rdbc.pool.internal
+package io.rdbc.pool.sapi.internal
 
+import io.github.povder.unipool.sapi.PooledResourceHandler
 import io.rdbc.sapi._
+import io.rdbc.sapi.exceptions.UncategorizedRdbcException
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
-private[pool] class PoolConnection(private[pool] val underlying: Connection,
-                                   poolName: String,
-                                   releaseListener: ConnectionReleaseListener)
+private[pool] class PooledConnection(private[pool] val underlying: Connection,
+                                     protected val pool: PooledResourceHandler[PooledConnection])
+                                    (implicit ec: ExecutionContext)
   extends Connection {
 
   def beginTx()(implicit timeout: Timeout): Future[Unit] = {
@@ -42,12 +45,19 @@ private[pool] class PoolConnection(private[pool] val underlying: Connection,
   }
 
   def release(): Future[Unit] = {
-    releaseListener.activeConnectionReleased(this)
+    pool.returnResource(this).recoverWith {
+      case NonFatal(ex) => Future.failed(new UncategorizedRdbcException(
+        "Failed to return connection to pool", Some(ex)
+      ))
+    }
   }
 
   def forceRelease(): Future[Unit] = {
-    //TODO should this actually close the conn? I don't think so
-    releaseListener.activeConnectionForceReleased(this)
+    pool.destroyResource(this).recoverWith {
+      case NonFatal(ex) => Future.failed(new UncategorizedRdbcException(
+        "Failed to destroy connection in pool", Some(ex)
+      ))
+    }
   }
 
   def validate()(implicit timeout: Timeout): Future[Unit] = {
@@ -75,5 +85,6 @@ private[pool] class PoolConnection(private[pool] val underlying: Connection,
     underlying.watchForIdle
   }
 
-  override lazy val toString: String = s"pool-$poolName-$underlying"
+  override lazy val toString: String = s"pooled-$underlying"
+
 }
