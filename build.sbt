@@ -9,7 +9,7 @@ shellPrompt.in(ThisBuild) := (state => s"${CYAN}project:$GREEN${Project.extract(
 lazy val commonSettings = Vector(
   organization := "io.rdbc.pool",
   organizationName := "rdbc contributors",
-  scalaVersion := "2.12.4",
+  scalaVersion := "2.12.6",
   crossScalaVersions := Vector(scalaVersion.value, "2.11.12"),
 
   licenses := Vector(
