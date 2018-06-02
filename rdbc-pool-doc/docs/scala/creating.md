@@ -13,18 +13,15 @@
  ! See the License for the specific language governing permissions and
  ! limitations under the License. 
  -->
-!!! warning
-    rdbc-pool project and this documentation is still a work in progress.
-    It's not ready yet for production use.
 
-A connection pool is a specialized [`ConnectionFactory`]() implementation that
+A connection pool is a specialized `ConnectionFactory` implementation that
 maintains a set of ready to use connections and performs connection validation
 before returning them to clients. The pool delegates connection requests to 
 underlying factory provided by client during pool creation.
 
 ## Creating a pool
 
-The pool is implemented in [`ConnectionPool`]() class.  To create instance of
+The pool is implemented in `ConnectionPool` class.  To create instance of
 the pool use `ConnectionPool` companion object's `apply` method as follows:
 
 ```
@@ -41,8 +38,9 @@ val pool = ConnectionPool(cf, ConnectionPoolConfig())
 To create the pool you first need to create and configure a connection factory
 provided by rdbc driver you use (see the line 4 in the above snippet) and then
 pass it as the `ConnectionPool#apply` argument (line 6). The second argument
-of the `apply` method is [`ConnectionPoolConfig`]() instance holding the pool
-configuration. See [configuration]() chapter for available configuration options.
+of the `apply` method is `ConnectionPoolConfig` instance holding the pool
+configuration. See [configuration](configuration.md) chapter for available
+configuration options.
 
 ## Closing a pool
 

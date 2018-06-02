@@ -13,16 +13,13 @@
  ! See the License for the specific language governing permissions and
  ! limitations under the License. 
  -->
-!!! warning
-    rdbc-pool project and this documentation is still a work in progress.
-    It's not ready yet for production use.
 
 ## Adding rdbc-pool to your project
 
 rdbc and rdbc-pool JARs are published to
 [Maven Central](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.rdbc.pool%22)
 repository. The library is currently available for Scala 2.11 and 2.12 and requires
-Java 8 runtime. rdbc-pool targets {{rdbc_version}} rdbc API version.
+Java 8 runtime or later. rdbc-pool targets {{rdbc_version}} rdbc API version.
 
 ### SBT
 For sbt projects, add the following to `build.sbt`:

@@ -9,6 +9,7 @@ pages:
       - Creating a pool: scala/creating.md
       - Features: scala/features.md
       - Configuration: scala/configuration.md
+    - Java API user guide: java/java.md
 theme: material
 
 copyright: Copyright &copy; 2016-2017 rdbc contributors

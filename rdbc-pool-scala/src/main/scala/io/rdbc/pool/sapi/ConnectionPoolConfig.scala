@@ -29,7 +29,6 @@ object ConnectionPoolConfig {
   object Defaults {
     val Name: String = "unnamed"
     val Size: Int = 20
-    val ConnectionBorrowTimeout: Timeout = Timeout(5.seconds)
     val ConnectionValidateTimeout: Timeout = Timeout(5.seconds)
     val ConnectionCreateTimeout: Timeout = Timeout(5.seconds)
     val ConnectionRollbackTimeout: Timeout = Timeout(5.seconds)
@@ -41,7 +40,6 @@ object ConnectionPoolConfig {
 
   def apply(name: String = Defaults.Name,
             size: Int = Defaults.Size,
-            connectionBorrowTimeout: Timeout = Defaults.ConnectionBorrowTimeout,
             connectionValidateTimeout: Timeout = Defaults.ConnectionValidateTimeout,
             connectionCreateTimeout: Timeout = Defaults.ConnectionCreateTimeout,
             connectionRollbackTimeout: Timeout = Defaults.ConnectionRollbackTimeout,
@@ -51,7 +49,6 @@ object ConnectionPoolConfig {
     new ConnectionPoolConfig(
       name = name,
       size = size,
-      connectionBorrowTimeout = connectionBorrowTimeout,
       connectionValidateTimeout = connectionValidateTimeout,
       connectionCreateTimeout = connectionCreateTimeout,
       connectionRollbackTimeout = connectionRollbackTimeout,
@@ -64,7 +61,6 @@ object ConnectionPoolConfig {
 
 class ConnectionPoolConfig(val name: String,
                            val size: Int,
-                           val connectionBorrowTimeout: Timeout,
                            val connectionValidateTimeout: Timeout,
                            val connectionCreateTimeout: Timeout,
                            val connectionRollbackTimeout: Timeout,
