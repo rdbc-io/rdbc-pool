@@ -13,9 +13,6 @@
  ! See the License for the specific language governing permissions and
  ! limitations under the License. 
  -->
-!!! warning
-    rdbc-pool project and this documentation is still a work in progress.
-    It's not ready yet for production use.
     
 The project provides a thread-safe, non-blocking connection pool implementation
 currently providing a basic feature set. Apart from maintaining a connection pool

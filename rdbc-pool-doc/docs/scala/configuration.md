@@ -13,11 +13,8 @@
  ! See the License for the specific language governing permissions and
  ! limitations under the License. 
  -->
-!!! warning
-    rdbc-pool project and this documentation is still a work in progress.
-    It's not ready yet for production use.
 
-The pool configuration is represented by [`ConnectionPoolConfig`]()
+The pool configuration is represented by `ConnectionPoolConfig`
 instance. Instances of this class can be created using its companion object's
 `apply` method. Every parameter of this method has some default value
 so you can use named parameters to set only some configuration options and
@@ -46,7 +43,7 @@ The list below contains available configuration options.
 
 ---
 
--    **validateTimeout**
+-    **connectionValidateTimeout**
 
      Connections are always validated before being returned to clients.
      If the connection validity can't be determined in this time, the connection
@@ -56,7 +53,7 @@ The list below contains available configuration options.
 
 ---
 
--    **connectTimeout**
+-    **connectionCreateTimeout**
 
      If opening the connection doesn't finish in this time, the attempt is aborted.
      Note that this property doesn't control the maximum time which clients will wait
@@ -66,7 +63,7 @@ The list below contains available configuration options.
 
 ---
 
--    **rollbackTimeout**
+-    **connectionRollbackTimeout**
 
      When clients return connections to the pool, the pool rolls back any transaction
      that may be in progress so that other clients are unaffected by previous connection
@@ -115,6 +112,6 @@ val cf: ConnectionFactory = ???
 val pool = ConnectionPool(cf, ConnectionPoolConfig(
               name = "mypool",
               size = 50,
-              validateTimeout = 5.seconds.timeout)
+              connectionValidateTimeout = 5.seconds.timeout)
            )
 ```
