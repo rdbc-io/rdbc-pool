@@ -51,7 +51,6 @@ private[pool] object Conversions {
       PoolConfig(
         name = connPoolConfig.name,
         size = connPoolConfig.size,
-        borrowTimeout = connPoolConfig.connectionBorrowTimeout.toUnipool,
         validateTimeout = connPoolConfig.connectionValidateTimeout.toUnipool,
         createTimeout = connPoolConfig.connectionCreateTimeout.toUnipool,
         resetTimeout = connPoolConfig.connectionRollbackTimeout.toUnipool,
