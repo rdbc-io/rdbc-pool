@@ -1,7 +1,7 @@
 import sbt._
 
 object Library {
-  private val rdbcVersion = "0.0.80"
+  private val rdbcVersion = "0.0.82"
   private val unipoolVersion = "0.0.4"
 
   val unipoolScala = "io.github.povder.unipool" %% "unipool-scala" % unipoolVersion
